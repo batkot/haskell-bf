@@ -2,7 +2,7 @@ module ParserSpecs
   (tests
   ) where
 
-import Test.Framework (defaultMain, testGroup)
+import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck
@@ -14,17 +14,18 @@ tests = testGroup "Parser tests" [
     testProperty "Tokens in Loop should create the same program" prop_Loop,
     testProperty "Optimized program shouldn't be longer than source" prop_optimizedProgramShouldBeShorterOrEqual,
     testProperty "Optimize should squash move commands to one" prop_optimizeSquashesMoveCommands,
-    testProperty "Optimize should squash add commands to one" prop_optimizeSquashesAddCommands
+    testProperty "Optimize should squash add commands to one" prop_optimizeSquashesAddCommands,
+    testProperty "Optimized loop contains optimized commands" prop_optimizedLoopContainsOptimizedCommands
   ]
 
 prop_Loop :: [L.Token] -> Bool
 prop_Loop input = 
-  P.parse input == (fmap extractProgramInLoop . P.parse $ wrapped input)
+  P.parse input == (fmap extractProgramInLoop . P.parse . wrapInLoop $ input)
   where 
     createToken x = L.Token { L.tokenType = x, L.position = (L.Position 0 0) }
-    wrapped input = [createToken L.StartLoop]
-                 ++ input 
-                 ++ [createToken L.EndLoop]
+    wrapInLoop input = [createToken L.StartLoop]
+                       ++ input 
+                       ++ [createToken L.EndLoop]
     extractProgramInLoop ((P.Loop p):[])  = p
     extractProgramInLoop x = x
 
@@ -75,4 +76,11 @@ prop_optimizeSquashesAddCommands x =
     _ -> False
   where
     optimized = P.optimize . fmap P.Add $ x
+
+prop_optimizedLoopContainsOptimizedCommands :: [P.Command] -> Bool
+prop_optimizedLoopContainsOptimizedCommands cmds = 
+  P.optimize cmds == (deLoop . head . P.optimize $ [inLoop cmds])
+  where
+    inLoop = P.Loop 
+    deLoop (P.Loop x) = x
 

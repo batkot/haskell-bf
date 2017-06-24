@@ -10,6 +10,7 @@ data Position = Position
   { line :: Int
   , col :: Int } deriving (Show, Eq)
 
+zeroPosition :: Position
 zeroPosition = Position 0 0
 
 data Token = Token 

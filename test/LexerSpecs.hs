@@ -2,7 +2,7 @@ module LexerSpecs
   (tests
   ) where
 
-import Test.Framework (defaultMain, testGroup)
+import Test.Framework (testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck
