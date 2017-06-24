@@ -4,11 +4,13 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 
 import qualified LexerSpecs as L
+import qualified ParserSpecs as P
 
 main :: IO ()
 main = defaultMain tests
 
-tests = [ L.tests ]
+tests = [ L.tests
+        , P.tests]
 
 prop1 :: Bool -> Bool
 prop1 b = b == False

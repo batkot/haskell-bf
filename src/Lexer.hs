@@ -4,17 +4,18 @@ module Lexer
     , Token(..)
     , TokenType(..)
     , Position(..)
+    , createToken
     ) where
 
 data Position = Position 
   { line :: Int
-  , col :: Int } deriving Show
+  , col :: Int } deriving (Show, Eq)
 
 zeroPosition = Position 0 0
 
 data Token = Token 
   { tokenType :: TokenType
-  , position :: Position }
+  , position :: Position } deriving (Show, Eq)
 
 data TokenType = MoveLeft
                | MoveRight
@@ -24,7 +25,7 @@ data TokenType = MoveLeft
                | Read
                | StartLoop
                | EndLoop
-               | Comment Char
+               | Comment Char deriving (Show, Eq)
 
 parseTokenType :: Char -> TokenType
 parseTokenType '<' = MoveLeft
