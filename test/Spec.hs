@@ -3,22 +3,18 @@ import Test.Framework.Providers.QuickCheck2 (testProperty)
 
 import Test.QuickCheck
 
+import qualified LexerSpecs as L
+
 main :: IO ()
 main = defaultMain tests
 
-tests = [
-        testGroup "Sorting Group 1" [
-                testProperty "prop1" prop1,
-                testProperty "prop2" prop2,
-                testProperty "prop3" prop3
-           ]
-      ]
+tests = [L.tests]
 
+prop1 :: Bool -> Bool
 prop1 b = b == False
   where types = (b :: Bool)
 
+prop2 :: Int -> Bool
 prop2 i = i < 42
   where types = (i :: Int)
 
-prop3 i = i  == i
-  where types = (i :: Int)
