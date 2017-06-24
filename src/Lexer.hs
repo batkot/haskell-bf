@@ -4,7 +4,6 @@ module Lexer
     , Token(..)
     , TokenType(..)
     , Position(..)
-    , createToken
     ) where
 
 data Position = Position 
