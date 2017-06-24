@@ -1,6 +1,7 @@
 module Lexer
     ( tokenize
     , untokenize
+    , Token(..)
     ) where
 
 data Token = MoveLeft
