@@ -1,5 +1,6 @@
 module Parser 
   ( parse
+  , optimize
   , Command (..)
   ) where
 
@@ -48,3 +49,17 @@ parse' acc t = parse' (acc ++ cmds) rem
 
 parse :: [L.Token] -> Either [SyntaxError] [Command]
 parse x = Right $ parse' [] x
+
+optimizeStep :: [Command] -> [Command] -> [Command]
+optimizeStep done [] = reverse done
+optimizeStep acc ((Move x):(Move y):cs) = optimizeStep acc $ (Move (x + y)):cs
+optimizeStep acc ((Add x):(Add y):cs) = optimizeStep acc $ (Add (x + y)):cs
+optimizeStep acc ((Move 0):cs) = optimizeStep acc cs
+optimizeStep acc ((Add 0):cs) = optimizeStep acc cs
+optimizeStep acc ((Loop cmds):cs) = optimizeStep (optimizedLoop:acc) cs
+  where
+    optimizedLoop = Loop $ optimizeStep [] cmds
+optimizeStep acc (x:cs) = optimizeStep (x:acc) cs
+
+optimize :: [Command] -> [Command]
+optimize = optimizeStep [] 
