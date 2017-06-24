@@ -2,42 +2,70 @@ module Lexer
     ( tokenize
     , untokenize
     , Token(..)
+    , TokenType(..)
+    , Position(..)
     ) where
 
-data Token = MoveLeft
-           | MoveRight
-           | Increment
-           | Decrement
-           | Print
-           | Read
-           | StartLoop
-           | EndLoop
-           | Comment Char
+data Position = Position 
+  { line :: Int
+  , col :: Int } deriving Show
 
-parseToken :: Char -> Token
-parseToken '<' = MoveLeft
-parseToken '>' = MoveRight
-parseToken '+' = Increment
-parseToken '-' = Decrement
-parseToken '.' = Print
-parseToken ',' = Read
-parseToken '[' = StartLoop
-parseToken ']' = EndLoop
-parseToken x = Comment x
+zeroPosition = Position 0 0
 
-toBrainFuckCode :: Token -> Char
-toBrainFuckCode MoveLeft = '<'
-toBrainFuckCode MoveRight = '>'
-toBrainFuckCode Increment = '+'
-toBrainFuckCode Decrement = '-'
-toBrainFuckCode Print = '.'
-toBrainFuckCode Read = ','
-toBrainFuckCode StartLoop = '['
-toBrainFuckCode EndLoop = ']'
-toBrainFuckCode (Comment x) = x
+data Token = Token 
+  { tokenType :: TokenType
+  , position :: Position }
+
+data TokenType = MoveLeft
+               | MoveRight
+               | Increment
+               | Decrement
+               | Print
+               | Read
+               | StartLoop
+               | EndLoop
+               | Comment Char
+
+parseTokenType :: Char -> TokenType
+parseTokenType '<' = MoveLeft
+parseTokenType '>' = MoveRight
+parseTokenType '+' = Increment
+parseTokenType '-' = Decrement
+parseTokenType '.' = Print
+parseTokenType ',' = Read
+parseTokenType '[' = StartLoop
+parseTokenType ']' = EndLoop
+parseTokenType x = Comment x
+
+toBrainFuckChar :: TokenType -> Char
+toBrainFuckChar MoveLeft = '<'
+toBrainFuckChar MoveRight = '>'
+toBrainFuckChar Increment = '+'
+toBrainFuckChar Decrement = '-'
+toBrainFuckChar Print = '.'
+toBrainFuckChar Read = ','
+toBrainFuckChar StartLoop = '['
+toBrainFuckChar EndLoop = ']'
+toBrainFuckChar (Comment x) = x
+
+createToken :: Position -> Char -> Token
+createToken p x = Token { tokenType = parseTokenType x, position = p }
 
 tokenize :: String -> [Token]
-tokenize = fmap parseToken
+tokenize = parse [] zeroPosition 
+  where 
+    newPos :: Char -> Position -> Position
+    newPos '\n' p@Position{ line = prevLine } = p { line = prevLine + 1, col = 1 }
+    newPos _ p@Position{col = prevCol } = p { col = prevCol + 1 }
+    parse :: [Token] -> Position -> String -> [Token]
+    parse res pos [] = reverse res
+    parse res pos (c:cs) = 
+      parse (token:res) p cs
+      where 
+        p = newPos c pos
+        token = createToken p c
 
 untokenize :: [Token] -> String
-untokenize = fmap toBrainFuckCode
+untokenize = fmap toCode
+  where
+    toCode = toBrainFuckChar . tokenType 

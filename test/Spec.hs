@@ -8,7 +8,7 @@ import qualified LexerSpecs as L
 main :: IO ()
 main = defaultMain tests
 
-tests = [L.tests]
+tests = [ L.tests ]
 
 prop1 :: Bool -> Bool
 prop1 b = b == False
