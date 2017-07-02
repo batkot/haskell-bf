@@ -9,13 +9,18 @@ import Test.QuickCheck
 
 import qualified Parser as P
 import qualified Lexer as L
+import qualified Arbitrary as A
+
+import Data.Either (isLeft)
 
 tests = testGroup "Parser tests" [
     testProperty "Tokens in Loop should create the same program" prop_Loop,
     testProperty "Optimized program shouldn't be longer than source" prop_optimizedProgramShouldBeShorterOrEqual,
     testProperty "Optimize should squash move commands to one" prop_optimizeSquashesMoveCommands,
     testProperty "Optimize should squash add commands to one" prop_optimizeSquashesAddCommands,
-    testProperty "Optimized loop contains optimized commands" prop_optimizedLoopContainsOptimizedCommands
+    testProperty "Optimized loop contains optimized commands" prop_optimizedLoopContainsOptimizedCommands,
+    testProperty "Non closed bracket results in SyntaxError" prop_nonClosedBracketResultsInSyntaxError,
+    testProperty "Not opened bracket results in SyntaxError" prop_notOpenedBracketResultsInSyntaxError
   ]
 
 prop_Loop :: [L.Token] -> Bool
@@ -29,32 +34,8 @@ prop_Loop input =
     extractProgramInLoop ((P.Loop p):[])  = p
     extractProgramInLoop x = x
 
-nonLoopingTokenTypeGen :: Gen L.TokenType
-nonLoopingTokenTypeGen = elements [
-  L.MoveLeft,
-  L.MoveRight,
-  L.Increment,
-  L.Decrement,
-  L.Print,
-  L.Read,
-  L.Comment ' ' ]
-
-instance Arbitrary L.Token where
-  arbitrary = oneof [ pure $ L.Token { L.tokenType = L.MoveLeft, L.position = L.Position 0 0 } ]
-
-allCommandsGen :: Gen P.Command
-allCommandsGen = elements [
-    P.Move 5,
-    P.Add 3,
-    P.Input,
-    P.Output
-  ]
-
-instance Arbitrary P.Command where
-  arbitrary = oneof [ allCommandsGen ]
-
 prop_optimizedProgramShouldBeShorterOrEqual :: [P.Command] -> Bool
-prop_optimizedProgramShouldBeShorterOrEqual cmd =
+prop_optimizedProgramShouldBeShorterOrEqual cmd = 
   length cmd >= (length optimized)
     where 
       optimized = P.optimize cmd
@@ -84,3 +65,14 @@ prop_optimizedLoopContainsOptimizedCommands cmds =
     inLoop = P.Loop 
     deLoop (P.Loop x) = x
 
+prop_nonClosedBracketResultsInSyntaxError :: [L.Token] -> Bool
+prop_nonClosedBracketResultsInSyntaxError tokens = 
+  isLeft . P.parse $ withOpenLoop
+  where
+    withOpenLoop = (L.Token L.StartLoop (L.Position 0 0 )):tokens
+
+prop_notOpenedBracketResultsInSyntaxError :: [L.Token] -> Bool
+prop_notOpenedBracketResultsInSyntaxError tokens = 
+  isLeft . P.parse $ withClosedLoop
+  where
+    withClosedLoop = (L.Token L.EndLoop (L.Position 0 0)):tokens

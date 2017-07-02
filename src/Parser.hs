@@ -5,11 +5,14 @@ module Parser
   ) where
 
 import qualified Lexer as L
+import Data.Bifunctor 
+import Data.Either (lefts, rights)
 
 data Command = Move Int
              | Add Int
              | Input
              | Output 
+             | NoOp
              | Loop [Command]
              deriving (Show, Eq)
 
@@ -20,35 +23,46 @@ data SyntaxError = SyntaxError
   { token :: L.Token
   , errorType :: SyntaxErrorType } deriving (Show, Eq)
 
-data ParsingContext = ParsingContext 
+data ParsingContext = Ctx
   { openBrackets :: [L.Token]
   , commands :: [Command]
   , errors :: [SyntaxError] }
 
-parseStep :: [L.Token] -> ([Command], [L.Token])
-parseStep ((L.Token L.MoveLeft _):cs) = ([Move (-1)], cs)
-parseStep ((L.Token L.MoveRight _):cs) = ([Move 1], cs)
-parseStep ((L.Token L.Increment _):cs) = ([Add 1], cs)
-parseStep ((L.Token L.Decrement _):cs) = ([Add (-1)], cs)
-parseStep ((L.Token L.Print _):cs) = ([Output], cs)
-parseStep ((L.Token L.Read _):cs) = ([Input], cs)
-parseStep ((L.Token (L.Comment _) _):cs) = ([], cs)
-parseStep ((L.Token L.StartLoop _):cs) = parseLoop cs []
-  where
-    parseLoop ((L.Token L.EndLoop _):cs) done = ([Loop (reverse done)], cs)
-    parseLoop x curr = parseLoop rem (curr ++ cmds)
-      where
-        (cmds, rem) = parseStep x 
-parseStep x = ([], x)
+flattenEither :: [Either a b] -> Either [a] [b]
+flattenEither e = case lefts e of
+  [] -> Right $ rights e
+  x -> Left x
 
-parse' :: [Command] -> [L.Token] -> [Command]
-parse' acc [] = reverse acc
-parse' acc t = parse' (acc ++ cmds) rem
+parseToken :: L.Token -> [L.Token] -> (Either [SyntaxError] Command, [L.Token])
+parseToken (L.Token L.MoveLeft _) cs = (Right (Move (-1)), cs)
+parseToken (L.Token L.MoveRight _) cs = (Right (Move 1), cs)
+parseToken (L.Token L.Increment _) cs = (Right (Add 1), cs)
+parseToken (L.Token L.Decrement _) cs = (Right (Add (-1)), cs)
+parseToken (L.Token L.Print _) cs =  (Right Output, cs)
+parseToken (L.Token L.Read _) cs =  (Right Input, cs)
+parseToken (L.Token (L.Comment _) _) cs = (Right NoOp, cs)
+parseToken startToken@(L.Token L.StartLoop _) cs = parseLoop cs []
   where
-    (cmds, rem) = parseStep t
+    parseLoop :: [L.Token] -> [Command] -> (Either [SyntaxError] Command, [L.Token])
+    parseLoop ((L.Token L.EndLoop _):rem) done = (Right (Loop (reverse done)), rem)
+    parseLoop [] _ = (Left [SyntaxError startToken MissingLoopClose], [])
+    parseLoop (t:ts) acc = 
+      case res of
+           Left x -> (Left ((SyntaxError startToken MissingLoopClose):x), rem)
+           Right cmd -> step cmd
+      where
+        (res, rem) = parseToken t ts
+        step cmd = parseLoop rem (cmd:acc)
+parseToken t@(L.Token L.EndLoop _) cs = (Left [SyntaxError t MissingLoopOpening], cs)
+
+parse' :: [Either [SyntaxError] Command] -> [L.Token] -> [Either [SyntaxError] Command]
+parse' acc [] = reverse acc
+parse' acc (t:ts) = parse' (res:acc) rem
+  where
+    (res, rem) = parseToken t ts
 
 parse :: [L.Token] -> Either [SyntaxError] [Command]
-parse = Right . parse' [] 
+parse = first concat . flattenEither . parse' []
 
 optimizeStep :: [Command] -> [Command] -> [Command]
 optimizeStep done [] = reverse done
