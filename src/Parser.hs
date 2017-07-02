@@ -2,6 +2,8 @@ module Parser
   ( parse
   , optimize
   , Command (..)
+  , SyntaxError (..)
+  , SyntaxErrorType (..)
   ) where
 
 import qualified Lexer as L
@@ -22,11 +24,6 @@ data SyntaxErrorType = MissingLoopOpening
 data SyntaxError = SyntaxError 
   { token :: L.Token
   , errorType :: SyntaxErrorType } deriving (Show, Eq)
-
-data ParsingContext = Ctx
-  { openBrackets :: [L.Token]
-  , commands :: [Command]
-  , errors :: [SyntaxError] }
 
 flattenEither :: [Either a b] -> Either [a] [b]
 flattenEither e = case lefts e of
@@ -70,6 +67,7 @@ optimizeStep acc ((Move x):(Move y):cs) = optimizeStep acc $ (Move (x + y)):cs
 optimizeStep acc ((Add x):(Add y):cs) = optimizeStep acc $ (Add (x + y)):cs
 optimizeStep acc ((Move 0):cs) = optimizeStep acc cs
 optimizeStep acc ((Add 0):cs) = optimizeStep acc cs
+optimizeStep acc (NoOp:cs) = optimizeStep acc cs
 optimizeStep acc ((Loop cmds):cs) = 
   optimizeStep (optimizedLoop:acc) cs
   where

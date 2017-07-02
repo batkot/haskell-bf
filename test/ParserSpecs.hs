@@ -67,12 +67,14 @@ prop_optimizedLoopContainsOptimizedCommands cmds =
 
 prop_nonClosedBracketResultsInSyntaxError :: [L.Token] -> Bool
 prop_nonClosedBracketResultsInSyntaxError tokens = 
-  isLeft . P.parse $ withOpenLoop
+  either matchErrorType (\_ -> False) . P.parse $ withOpenLoop
   where
+    matchErrorType (P.SyntaxError{P.errorType = et}:[])  = et == P.MissingLoopClose
     withOpenLoop = (L.Token L.StartLoop (L.Position 0 0 )):tokens
 
 prop_notOpenedBracketResultsInSyntaxError :: [L.Token] -> Bool
 prop_notOpenedBracketResultsInSyntaxError tokens = 
-  isLeft . P.parse $ withClosedLoop
+  either matchErrorType (\_ -> False) . P.parse $ withClosedLoop
   where
+    matchErrorType (P.SyntaxError{P.errorType = et}:[]) = et == P.MissingLoopOpening
     withClosedLoop = (L.Token L.EndLoop (L.Position 0 0)):tokens
