@@ -1,24 +1,10 @@
-import Test.Framework (defaultMain, testGroup)
-import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.Framework (defaultMain)
 
-import Test.QuickCheck
+import qualified LexerSpecs as L
+import qualified ParserSpecs as P
 
 main :: IO ()
 main = defaultMain tests
 
-tests = [
-        testGroup "Sorting Group 1" [
-                testProperty "prop1" prop1,
-                testProperty "prop2" prop2,
-                testProperty "prop3" prop3
-           ]
-      ]
-
-prop1 b = b == False
-  where types = (b :: Bool)
-
-prop2 i = i < 42
-  where types = (i :: Int)
-
-prop3 i = i  == i
-  where types = (i :: Int)
+tests = [ L.tests
+        , P.tests]
