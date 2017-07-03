@@ -8,8 +8,8 @@ main :: IO ()
 main = do
   bf <- getContents
   d <- either printErrors run . P.parse . L.tokenize $ bf
-  return ()
+  putStrLn d
   where
     zeroData = R.initData 0
-    printErrors x = return zeroData
-    run = R.runProgram zeroData . P.optimize 
+    printErrors x = return . concat . fmap show $ x
+    run = fmap show . R.runProgram zeroData . P.optimize 
