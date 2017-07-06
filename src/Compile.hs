@@ -1,5 +1,6 @@
 module Compile
-  ( compile
+  ( Compilator
+  , transpileToC
   , C(..))
   where
 
@@ -7,40 +8,42 @@ import qualified Parser as P
 
 type Source = [String]
 
-class Compilator a where
-  header :: a -> Source
-  footer :: a -> Source
-  run :: a -> P.Command -> Source
+type Compilator = [P.Command] -> Source
 
-compile :: (Compilator a) => a -> [P.Command] -> Source
-compile c bf = 
-  header c 
-  ++ (foldl compileStep [] bf)
-  ++ footer c
-  where 
-    compileStep acc cmd =  acc ++ run c cmd 
+data C = C 
+       { ptrName :: String
+       , dataName :: String
+       }
 
-data C = C
+dataToken :: C -> String
+dataToken (C ptr d) = d ++ "[" ++ ptr ++ "]"
 
-instance Compilator C where
-  header _ = [ "#include <stdio.h>"
+transpileCommand :: C -> P.Command -> String
+transpileCommand (C ptr _) (P.Move x) = ptr ++ "+=" ++ show x ++ ";"
+transpileCommand c (P.Add x) = dataToken c ++ "+=" ++ show x ++ ";"
+transpileCommand c P.Input = dataToken c ++ "=" ++ "(unsigned short)getchar();"
+transpileCommand c P.Output = "putchar(" ++ dataToken c ++ ");"
+transpileCommand _ P.NoOp = []
+transpileCommand c (P.Loop cmds) = "while(" ++ dataToken c ++ "){" ++ foldl step [] cmds ++ "}"
+  where
+    step acc cmd = acc ++ transpileCommand c cmd
+
+transpileToC :: C -> [P.Command] -> Source
+transpileToC opt cmds = 
+  header ++ [body, cFooter]
+  where
+    header = cHeader opt
+    step acc cmd = acc ++ transpileCommand opt cmd
+    body = foldl step [] cmds
+
+cHeader :: C -> [String]
+cHeader (C ptr d) =  [ "#include <stdio.h>"
              , "int main(int argc, const char * argv[])"
              , "{"
-             , "  unsigned short data[3000];"
-             , "  unsigned short ptr = 3000;"
-             , "  while(--ptr) { data[ptr] = 0; }"
-             , "  ptr = 1500; "]
+             , "  unsigned short " ++ d ++ "[3000];"
+             , "  unsigned short " ++ ptr ++ "=3000;"
+             , "  while(--"++ ptr ++ ") { data[ptr] = 0; }"
+             , "  " ++ ptr ++ " = 1500; "]
 
-  footer _ = [ "}" ]
-
-  run _ (P.Move x) = ["ptr += " ++ show x ++ ";"]
-  run _ (P.Add x) = ["data[ptr] += " ++ show x ++ ";"]
-  run _ (P.Input) = ["data[ptr] = (unsigned short)getchar();"]
-  run _ (P.Output) = ["putchar(data[ptr]);"]
-  run _ (P.NoOp) = []
-  run c (P.Loop cmds) = 
-    ["while(data[ptr])", "{"]
-    ++ (foldl step [] cmds)
-    ++ ["}"]
-      where
-        step acc cmd = acc ++ run c cmd
+cFooter :: String
+cFooter = "}"

@@ -6,13 +6,18 @@ import qualified Runtime as R
 import qualified Compile as C
 
 cCompile :: IO()
-cCompile = do
-  bf <- getContents
-  d <- either printErrors ccompile . P.parse . L.tokenize $ bf
-  mapM_ putStrLn d
+cCompile = compile . C.transpileToC $ C.C "ptr" "data"
+
+compile :: C.Compilator -> IO()
+compile compilator = getContents >>= run
   where
-    printErrors x = return . fmap show $ x
-    ccompile = return . C.compile C.C . P.optimize
+    run = mapM_ putStrLn . compilationPipeline compilator
+
+compilationPipeline :: C.Compilator -> String -> [String]
+compilationPipeline compilator bf = either printErrors compile . P.parse . L.tokenize $ bf
+  where
+    printErrors = fmap show
+    compile = compilator . P.optimize
 
 run :: IO()
 run = do
