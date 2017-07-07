@@ -30,20 +30,23 @@ transpileCommand c (P.Loop cmds) = "while(" ++ dataToken c ++ "){" ++ foldl step
 
 transpileToC :: C -> [P.Command] -> Source
 transpileToC opt cmds = 
-  header ++ [body, cFooter]
+  cInclude ["<stdio.h>"]
+  ++ [header ++ body ++ cFooter]
   where
     header = cHeader opt
     step acc cmd = acc ++ transpileCommand opt cmd
     body = foldl step [] cmds
 
-cHeader :: C -> [String]
-cHeader (C ptr d) =  [ "#include <stdio.h>"
-             , "int main(int argc, const char * argv[])"
-             , "{"
-             , "  unsigned short " ++ d ++ "[3000];"
-             , "  unsigned short " ++ ptr ++ "=3000;"
-             , "  while(--"++ ptr ++ ") { data[ptr] = 0; }"
-             , "  " ++ ptr ++ " = 1500; "]
+cInclude :: [String] -> [String]
+cInclude = fmap $ (++) "#include"
+
+cHeader :: C -> String
+cHeader (C ptr d) = "int main(int argc, const char * argv[]) \
+             \ { \
+             \  unsigned short " ++ d ++ "[3000]; \
+             \  unsigned short " ++ ptr ++ "=3000;\
+             \  while(--"++ ptr ++ ") { data[ptr] = 0; }"
+                ++ ptr ++ " = 1500;"
 
 cFooter :: String
 cFooter = "}"

@@ -67,3 +67,4 @@ extra-package-dbs: []
 ghc-options: 
   "*": -Wall -Werror
 
+rebuild-ghc-options: true

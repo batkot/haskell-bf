@@ -17,10 +17,10 @@ moveLeft _ (D (l:ls) a r) = D ls l (a:r)
 
 moveRight :: a -> Data a -> Data a
 moveRight d (D l a []) = D (a:l) d []
-moveRight d (D l a (r:rs)) = D (a:l) r rs
+moveRight _ (D l a (r:rs)) = D (a:l) r rs
 
 modify :: Data a ->  a -> Data a
-modify (D l c r) x = D l x r
+modify (D l _ r) x = D l x r
 
 type ProgramData = Data Int
 
