@@ -38,14 +38,14 @@ transpileToC opt cmds =
     body = foldl step [] cmds
 
 cInclude :: [String] -> [String]
-cInclude = fmap $ (++) "#include"
+cInclude = fmap $ (++) "#Include"
 
 cHeader :: C -> String
-cHeader (C ptr d) = "int main(int argc, const char * argv[]) \
+cHeader c@(C ptr d) = "int main(int argc, const char * argv[]) \
              \ { \
              \  unsigned short " ++ d ++ "[3000]; \
              \  unsigned short " ++ ptr ++ "=3000;\
-             \  while(--"++ ptr ++ ") { data[ptr] = 0; }"
+             \  while(--"++ ptr ++ ") { " ++ dataToken c ++ " = 0; }"
                 ++ ptr ++ " = 1500;"
 
 cFooter :: String
