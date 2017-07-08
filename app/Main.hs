@@ -68,47 +68,21 @@ runOptionsParser = RunOptions
                     <> help "starts REPL"
                     )
 
-cCompile :: IO()
-cCompile = compile . C.transpileToC $ C.C "ptr" "data"
-
-compile :: C.Compilator -> IO()
-compile compilator = getContents >>= runCompilation
-  where
-    runCompilation = mapM_ putStrLn . compilationPipeline compilator
-
-compilationPipeline :: C.Compilator -> String -> [String]
-compilationPipeline compilator bf = either printErrors doCompile . P.parse . L.tokenize $ bf
-  where
-    printErrors = fmap show
-    doCompile = compilator . P.optimize
-
-run :: IO()
-run = do
-  bf <- getLine
-  d <- either printErrors doRun . P.parse . L.tokenize $ bf
-  putStrLn d
-  main
-  where
-    zeroData = R.initData 0
-    printErrors x = return . concat . fmap show $ x
-    doRun = fmap show . R.runProgram zeroData . P.optimize 
-
 parseBrainfuck :: String -> Either [P.SyntaxError] [P.Command]
 parseBrainfuck = P.parse . L.tokenize
-
 
 combineSources :: [String] -> Either [P.SyntaxError] [P.Command]
 combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck 
 
-run' :: RunOptions -> IO()
-run' (RunOptions fs _) = do
+run :: RunOptions -> IO()
+run (RunOptions fs _) = do
     contents <- sequence . fmap readFile $ fs
     case combineSources contents of
          Left e -> mapM_ (putStrLn . show) e
          Right p -> void $ R.runProgram (R.initData 0) $ p
 
-compile' :: CompileOptions -> IO()
-compile' (CompileOptions fs _) = do
+compile :: CompileOptions -> IO()
+compile (CompileOptions fs _) = do
   contents <- sequence . fmap readFile $ fs
   case combineSources contents of
        Left e -> mapM_ (putStrLn . show) e
@@ -121,5 +95,5 @@ main = execParser opts >>= dispatch
       ( fullDesc
       <> progDesc "Simple Brainfuck interpreter, compiler"
       <> header "The Meretricious Brainfuck Compilation System")
-    dispatch (BfcOptions (Run r)) = run' r
-    dispatch (BfcOptions (Compile c)) = compile' c
+    dispatch (BfcOptions (Run r)) = run r
+    dispatch (BfcOptions (Compile c)) = compile c
