@@ -33,8 +33,8 @@ data RunMode = RunMode
 bfcOptionsParser :: Parser BfcOptions
 bfcOptionsParser = BfcOptions 
                 <$> subparser
-                    ( command "compile" (info compileParser ( progDesc "Compiles Brainfuck sources to given language" ))
-                   <> command "run" (info runCmdParser ( progDesc "Runs Brainfuck sources" ))
+                    ( command "compile" (info (compileParser <**> helper) ( progDesc "Compiles Brainfuck sources to given language" ))
+                   <> command "run" (info (runCmdParser <**> helper) ( progDesc "Runs Brainfuck sources" ))
                     )
 
 compileParser :: Parser BfcCommand
