@@ -4,6 +4,7 @@ module Parser
   , Command (..)
   , SyntaxError (..)
   , SyntaxErrorType (..)
+  , flattenEither
   ) where
 
 import qualified Lexer as L

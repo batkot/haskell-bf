@@ -38,7 +38,7 @@ transpileToC opt cmds =
     body = foldl step [] cmds
 
 cInclude :: [String] -> [String]
-cInclude = fmap $ (++) "#Include"
+cInclude = fmap $ (++) "#include"
 
 cHeader :: C -> String
 cHeader c@(C ptr d) = "int main(int argc, const char * argv[]) \

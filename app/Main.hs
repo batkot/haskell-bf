@@ -2,7 +2,8 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Control.Monad (sequence)
+import Control.Monad (sequence, void)
+import Data.Bifunctor (bimap)
 
 import qualified Lexer as L
 import qualified Parser as P
@@ -92,20 +93,33 @@ run = do
     printErrors x = return . concat . fmap show $ x
     doRun = fmap show . R.runProgram zeroData . P.optimize 
 
+parseBrainfuck :: String -> Either [P.SyntaxError] [P.Command]
+parseBrainfuck = P.parse . L.tokenize
+
+
+combineSources :: [String] -> Either [P.SyntaxError] [P.Command]
+combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck 
+
 run' :: RunOptions -> IO()
 run' (RunOptions fs _) = do
     contents <- sequence . fmap readFile $ fs
-    putStrLn . concat . fmap show . fmap (P.parse . L.tokenize ) $ contents
+    case combineSources contents of
+         Left e -> mapM_ (putStrLn . show) e
+         Right p -> void $ R.runProgram (R.initData 0) $ p
 
 compile' :: CompileOptions -> IO()
-compile' _ = putStrLn "Hello from compile"
+compile' (CompileOptions fs _) = do
+  contents <- sequence . fmap readFile $ fs
+  case combineSources contents of
+       Left e -> mapM_ (putStrLn . show) e
+       Right p -> mapM_ putStrLn . C.transpileToC (C.C "p" "d") . P.optimize $ p
 
 main :: IO()
 main = execParser opts >>= dispatch
   where
     opts = info (bfcOptionsParser <**> helper)
       ( fullDesc
-      <> progDesc "Description of this sheeeeit"
-      <> header "The _ Brainfuck Compilation System")
+      <> progDesc "Simple Brainfuck interpreter, compiler"
+      <> header "The Meretricious Brainfuck Compilation System")
     dispatch (BfcOptions (Run r)) = run' r
     dispatch (BfcOptions (Compile c)) = compile' c

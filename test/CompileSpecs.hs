@@ -47,7 +47,7 @@ cOpt :: C.C
 cOpt = C.C ptrName dataName
 
 cIncludes :: [String]
-cIncludes = ["#Include<stdio.h>"]
+cIncludes = ["#include<stdio.h>"]
 
 cHeader :: String
 cHeader = "int main(int argc, const char * argv[]) \
