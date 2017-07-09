@@ -20,7 +20,7 @@ data BfcCommand = Compile CompileOptions
 
 data CompileOptions = CompileOptions
                     { filesToCompile :: [String]
-                    , output :: String } deriving Show
+                    , outputFile :: String } deriving Show
 
 data RunOptions = RunOptions
                 { files :: [String]
@@ -71,22 +71,36 @@ runOptionsParser = RunOptions
 parseBrainfuck :: String -> Either [P.SyntaxError] [P.Command]
 parseBrainfuck = P.parse . L.tokenize
 
-combineSources :: [String] -> Either [P.SyntaxError] [P.Command]
-combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck 
-
 run :: RunOptions -> IO()
 run (RunOptions fs _) = do
-    contents <- sequence . fmap readFile $ fs
+    contents <- readFiles fs
     case combineSources contents of
          Left e -> mapM_ (putStrLn . show) e
          Right p -> void $ R.runProgram (R.initData 0) $ p
+  where
+    combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
-compile :: CompileOptions -> IO()
-compile (CompileOptions fs _) = do
-  contents <- sequence . fmap readFile $ fs
-  case combineSources contents of
-       Left e -> mapM_ (putStrLn . show) e
-       Right p -> mapM_ putStrLn . C.transpileToC (C.C "p" "d") . P.optimize $ p
+compile :: C.Compilator -> [String] -> [String]    
+compile c sources = do
+  case combineSources sources of
+       Left e -> fmap describeError e
+       Right p -> c . P.optimize $ p
+  where
+    combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
+
+compile' :: C.Compilator -> CompileOptions -> IO()
+compile' c (CompileOptions sourceFiles _) = do
+  sources <- readFiles sourceFiles
+  mapM_ putStrLn . compile c $ sources
+
+cCompilator :: C.Compilator
+cCompilator = C.transpileToC $ C.C "p" "d"
+
+describeError :: P.SyntaxError -> String
+describeError = show
+
+readFiles :: [String] -> IO([String])
+readFiles = sequence . fmap readFile
 
 main :: IO()
 main = execParser opts >>= dispatch
@@ -96,4 +110,4 @@ main = execParser opts >>= dispatch
       <> progDesc "Simple Brainfuck interpreter, compiler"
       <> header "The Meretricious Brainfuck Compilation System")
     dispatch (BfcOptions (Run r)) = run r
-    dispatch (BfcOptions (Compile c)) = compile c
+    dispatch (BfcOptions (Compile c)) = compile' cCompilator c
