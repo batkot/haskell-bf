@@ -99,18 +99,23 @@ repl s@(ReplState d) (Interpret bf) =
         return s
        Right p -> do 
         newState <- R.runProgram d p 
-        putStrLn . show $ newState
         return s { programData = newState }
 
 runRepl :: ReplState -> IO(ReplState)
 runRepl s = 
-  putStr "bfi| " >> hFlush stdout >> fmap parseReplCommand getLine >>= repl s >>= runRepl
+  putStr "bfi| " >> hFlush stdout >> fmap parseReplCommand getLine 
+    >>= repl s 
+    >>= (\newState -> showProgramData newState >> runRepl newState)
+  where
+    showProgramData = putStrLn . show . programData
   
 run :: RunOptions -> IO()
-run (RunOptions fs _)  = do
+run (RunOptions fs rMode)  = do
   cmds <- fmap (fmap Interpret) . readFiles $ fs 
   state <- foldM repl (ReplState (R.initData 0)) cmds
-  void $ runRepl state
+  case rMode of
+       RunMode -> return ()
+       ReplMode -> void $ runRepl state
 
 -- compilation
 compile :: C.Compilator -> [String] -> Either [String] [String]
