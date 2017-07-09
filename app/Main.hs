@@ -2,8 +2,9 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Control.Monad (sequence, void)
+import Control.Monad (sequence, void, foldM)
 import Data.Bifunctor (bimap)
+import System.IO (hFlush, stdout)
 
 import qualified Lexer as L
 import qualified Parser as P
@@ -79,8 +80,17 @@ data ReplState = ReplState
 
 data ReplCommand = Interpret String
                  | Clean
+                 | Help
+
+parseReplCommand :: String -> ReplCommand
+parseReplCommand (":clean") = Clean
+parseReplCommand (":c") = Clean
+parseReplCommand (':':_) = Help
+parseReplCommand x = Interpret x
+
 
 repl :: ReplState -> ReplCommand -> IO (ReplState)
+repl s Help = return s
 repl s Clean = return $ s { programData = R.initData 0 }
 repl s@(ReplState d) (Interpret bf) = 
   case parseBrainfuck bf of
@@ -94,12 +104,13 @@ repl s@(ReplState d) (Interpret bf) =
 
 runRepl :: ReplState -> IO(ReplState)
 runRepl s = 
-  fmap parseCmd getLine >>= repl s >>= runRepl
-    where
-      parseCmd = Interpret
+  putStr "bfi| " >> hFlush stdout >> fmap parseReplCommand getLine >>= repl s >>= runRepl
   
 run :: RunOptions -> IO()
-run _ = void $ runRepl $ ReplState (R.initData 0)
+run (RunOptions fs _)  = do
+  cmds <- fmap (fmap Interpret) . readFiles $ fs 
+  state <- foldM repl (ReplState (R.initData 0)) cmds
+  void $ runRepl state
 
 -- compilation
 compile :: C.Compilator -> [String] -> Either [String] [String]
