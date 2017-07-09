@@ -44,10 +44,11 @@ compileOptionsParser :: Parser CompileOptions
 compileOptionsParser = CompileOptions
                     <$> some (argument str
                                (metavar "INPUT_SOURCES"
-                               <> help "Brainfuck sources to compile")
+                               <> help "Brainfuck sources to compile. Files are concated to single BF program in given order")
                              )
                     <*> strOption
                         ( long "output"
+                        <> short 'o'
                         <> metavar "OUTPUT_FILE"
                         <> showDefault
                         <> value "out"
@@ -97,17 +98,8 @@ runRepl s = do
     where
       parseCmd = Interpret
   
-run' :: RunOptions -> IO()
-run' _ = void $ runRepl $ ReplState (R.initData 0)
-
 run :: RunOptions -> IO()
-run (RunOptions fs _) = do
-    contents <- readFiles fs
-    case combineSources contents of
-         Left e -> mapM_ (putStrLn . show) e
-         Right p -> void $ R.runProgram (R.initData 0) $ p
-  where
-    combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
+run _ = void $ runRepl $ ReplState (R.initData 0)
 
 -- compilation
 compile :: C.Compilator -> [String] -> [String]    
@@ -119,9 +111,9 @@ compile c sources = do
     combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
 compile' :: C.Compilator -> CompileOptions -> IO()
-compile' c (CompileOptions sourceFiles _) = do
-  sources <- readFiles sourceFiles
-  mapM_ putStrLn . compile c $ sources
+compile' c (CompileOptions sourceFiles o) = do
+  readFiles sourceFiles
+  >>= writeFile o . unlines . compile c 
 
 cCompilator :: C.Compilator
 cCompilator = C.transpileToC $ C.C "p" "d"
@@ -139,5 +131,5 @@ main = execParser opts >>= dispatch
       ( fullDesc
       <> progDesc "Simple Brainfuck interpreter, compiler"
       <> header "The Meretricious Brainfuck Compilation System")
-    dispatch (BfcOptions (Run r)) = run' r
+    dispatch (BfcOptions (Run r)) = run r
     dispatch (BfcOptions (Compile c)) = compile' cCompilator c
