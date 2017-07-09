@@ -2,17 +2,17 @@ module LexerSpecs
   (tests
   ) where
 
-import Test.Framework (testGroup)
+import Test.Framework (testGroup, Test)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import Test.QuickCheck
 import Data.List
 
 import Lexer 
 
+tests :: Test
 tests = testGroup "Parsing Tests" [
           testProperty "Tokenization should preserve length"  prop_tokenizationLength,
-          testProperty "Untokenization should revert tokenization"  prop_tokenizationLength,
+          testProperty "Untokenization should revert tokenization"  prop_tokenizationUntokenizationReverts,
           testProperty "Non Brain fuck chars should be comment" prop_nonBrainfuckCharsComments,
           testProperty "Last elements in lines should add to tokens count" prop_lastPositionLength,
           testProperty "Max line # should be equal to number of new lines" prop_numberOfLinesShouldBeEqualToNumberOfNewLines

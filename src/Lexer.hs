@@ -59,7 +59,7 @@ tokenize = parse [] zeroPosition
     newPos '\n' p@Position{ line = prevLine } = p { line = prevLine + 1, col = 1 }
     newPos _ p@Position{col = prevCol } = p { col = prevCol + 1 }
     parse :: [Token] -> Position -> String -> [Token]
-    parse res pos [] = reverse res
+    parse res _ [] = reverse res
     parse res pos (c:cs) = 
       parse (token:res) p cs
       where 

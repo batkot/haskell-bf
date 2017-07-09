@@ -1,5 +1,5 @@
 name:                haskell-bf
-version:             0.1.0.0
+version:             0.2.0.0
 -- synopsis:
 -- description:
 homepage:            https://github.com/batkot/haskell-bf#readme
@@ -18,6 +18,7 @@ library
   exposed-modules:     Lexer
                      , Parser
                      , Runtime
+                     , Compile
   build-depends:       base >= 4.7 && < 5
   default-language:    Haskell2010
 
@@ -27,6 +28,7 @@ executable haskell-bf-exe
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , haskell-bf
+                     , optparse-applicative
   default-language:    Haskell2010
 
 test-suite haskell-bf-test
@@ -38,8 +40,11 @@ test-suite haskell-bf-test
                      , test-framework
                      , test-framework-quickcheck2
                      , QuickCheck
+                     , test-framework-hunit
+                     , HUnit
   other-modules:       LexerSpecs
                      , ParserSpecs
+                     , CompileSpecs
                      , Arbitrary
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010

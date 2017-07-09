@@ -4,6 +4,7 @@ module Parser
   , Command (..)
   , SyntaxError (..)
   , SyntaxErrorType (..)
+  , flattenEither
   ) where
 
 import qualified Lexer as L
@@ -41,22 +42,22 @@ parseToken (L.Token (L.Comment _) _) cs = (Right NoOp, cs)
 parseToken startToken@(L.Token L.StartLoop _) cs = parseLoop cs []
   where
     parseLoop :: [L.Token] -> [Command] -> (Either [SyntaxError] Command, [L.Token])
-    parseLoop ((L.Token L.EndLoop _):rem) done = (Right (Loop (reverse done)), rem)
+    parseLoop ((L.Token L.EndLoop _):ts) done = (Right (Loop (reverse done)), ts)
     parseLoop [] _ = (Left [SyntaxError startToken MissingLoopClose], [])
     parseLoop (t:ts) acc = 
       case res of
-           Left x -> (Left ((SyntaxError startToken MissingLoopClose):x), rem)
+           Left x -> (Left ((SyntaxError startToken MissingLoopClose):x), remaining)
            Right cmd -> step cmd
       where
-        (res, rem) = parseToken t ts
-        step cmd = parseLoop rem (cmd:acc)
+        (res, remaining) = parseToken t ts
+        step cmd = parseLoop remaining (cmd:acc)
 parseToken t@(L.Token L.EndLoop _) cs = (Left [SyntaxError t MissingLoopOpening], cs)
 
 parse' :: [Either [SyntaxError] Command] -> [L.Token] -> [Either [SyntaxError] Command]
 parse' acc [] = reverse acc
-parse' acc (t:ts) = parse' (res:acc) rem
+parse' acc (t:ts) = parse' (res:acc) remaining
   where
-    (res, rem) = parseToken t ts
+    (res, remaining) = parseToken t ts
 
 parse :: [L.Token] -> Either [SyntaxError] [Command]
 parse = first concat . flattenEither . parse' []
