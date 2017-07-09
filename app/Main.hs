@@ -71,6 +71,35 @@ runOptionsParser = RunOptions
 parseBrainfuck :: String -> Either [P.SyntaxError] [P.Command]
 parseBrainfuck = P.parse . L.tokenize
 
+-- REPL
+data ReplState = ReplState
+               { programData :: R.ProgramData 
+               } deriving Show
+
+data ReplCommand = Interpret String
+                 | Clean
+
+repl :: ReplState -> ReplCommand -> IO (ReplState)
+repl s Clean = return $ s { programData = R.initData 0 }
+repl s@(ReplState d) (Interpret bf) = 
+  case parseBrainfuck bf of
+       Left e -> do 
+        mapM_ (putStrLn . describeError) e
+        return s
+       Right p -> do 
+        newState <- R.runProgram d p 
+        putStrLn . show $ newState
+        return s { programData = newState }
+
+runRepl :: ReplState -> IO(ReplState)
+runRepl s = do
+  fmap parseCmd getLine >>= repl s >>= runRepl
+    where
+      parseCmd = Interpret
+  
+run' :: RunOptions -> IO()
+run' _ = void $ runRepl $ ReplState (R.initData 0)
+
 run :: RunOptions -> IO()
 run (RunOptions fs _) = do
     contents <- readFiles fs
@@ -80,6 +109,7 @@ run (RunOptions fs _) = do
   where
     combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
+-- compilation
 compile :: C.Compilator -> [String] -> [String]    
 compile c sources = do
   case combineSources sources of
@@ -109,5 +139,5 @@ main = execParser opts >>= dispatch
       ( fullDesc
       <> progDesc "Simple Brainfuck interpreter, compiler"
       <> header "The Meretricious Brainfuck Compilation System")
-    dispatch (BfcOptions (Run r)) = run r
+    dispatch (BfcOptions (Run r)) = run' r
     dispatch (BfcOptions (Compile c)) = compile' cCompilator c
