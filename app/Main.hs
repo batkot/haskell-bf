@@ -44,7 +44,7 @@ compileOptionsParser :: Parser CompileOptions
 compileOptionsParser = CompileOptions
                     <$> some (argument str
                                (metavar "INPUT_SOURCES"
-                               <> help "Brainfuck sources to compile. Files are concated to single BF program in given order")
+                               <> help "Brainfuck sources to compile. Files are parsed and compiled in given order to single BF program")
                              )
                     <*> strOption
                         ( long "output"
@@ -93,7 +93,7 @@ repl s@(ReplState d) (Interpret bf) =
         return s { programData = newState }
 
 runRepl :: ReplState -> IO(ReplState)
-runRepl s = do
+runRepl s = 
   fmap parseCmd getLine >>= repl s >>= runRepl
     where
       parseCmd = Interpret
@@ -102,18 +102,18 @@ run :: RunOptions -> IO()
 run _ = void $ runRepl $ ReplState (R.initData 0)
 
 -- compilation
-compile :: C.Compilator -> [String] -> [String]    
-compile c sources = do
-  case combineSources sources of
-       Left e -> fmap describeError e
-       Right p -> c . P.optimize $ p
+compile :: C.Compilator -> [String] -> Either [String] [String]
+compile c sources = 
+  bimap (fmap describeError) (c . P.optimize) . combineSources $ sources
   where
     combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
 compile' :: C.Compilator -> CompileOptions -> IO()
-compile' c (CompileOptions sourceFiles o) = do
-  readFiles sourceFiles
-  >>= writeFile o . unlines . compile c 
+compile' c (CompileOptions sourceFiles o) = 
+  readFiles sourceFiles >>= either printErrors writeSource . compile c 
+    where
+      printErrors = putStrLn . unlines
+      writeSource = writeFile o . unlines
 
 cCompilator :: C.Compilator
 cCompilator = C.transpileToC $ C.C "p" "d"
@@ -129,7 +129,7 @@ main = execParser opts >>= dispatch
   where
     opts = info (bfcOptionsParser <**> helper)
       ( fullDesc
-      <> progDesc "Simple Brainfuck interpreter, compiler"
+      <> progDesc "Simple Brainfuck interpreter, compiler and REPL"
       <> header "The Meretricious Brainfuck Compilation System")
     dispatch (BfcOptions (Run r)) = run r
     dispatch (BfcOptions (Compile c)) = compile' cCompilator c
