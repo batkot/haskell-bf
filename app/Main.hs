@@ -79,27 +79,31 @@ data ReplState = ReplState
                } deriving Show
 
 data ReplCommand = Interpret String
+                 | Load String
                  | Clean
                  | Help
 
 parseReplCommand :: String -> ReplCommand
 parseReplCommand (":clean") = Clean
 parseReplCommand (":c") = Clean
+parseReplCommand (':':'l':'o':'a':'d':' ':x) = Load x
+parseReplCommand (':':'l':' ':x) = Load x
 parseReplCommand (':':_) = Help
 parseReplCommand x = Interpret x
 
 
 repl :: ReplState -> ReplCommand -> IO (ReplState)
-repl s Help = return s
+repl s Help = putStrLn "Help" >>= \() -> return s
 repl s Clean = return $ s { programData = R.initData 0 }
+repl s (Load file) = 
+  -- find some kind of readFile
+  -- FileName -> IO (Maybe String)
+  -- FileName -> Either Error IO(String)
+  fmap Interpret (readFile file) >>= repl s 
 repl s@(ReplState d) (Interpret bf) = 
   case parseBrainfuck bf of
-       Left e -> do 
-        mapM_ (putStrLn . describeError) e
-        return s
-       Right p -> do 
-        newState <- R.runProgram d p 
-        return s { programData = newState }
+       Left e -> mapM_ (putStrLn . describeError) e >>= \() -> return s
+       Right p -> R.runProgram d p >>= \ns -> return s { programData = ns }
 
 runRepl :: ReplState -> IO(ReplState)
 runRepl s = 
