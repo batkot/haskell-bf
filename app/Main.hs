@@ -2,7 +2,7 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Control.Monad (sequence, void, foldM)
+import Control.Monad (void, foldM)
 import Data.Bifunctor (bimap)
 import System.IO (hFlush, stdout)
 
@@ -11,7 +11,7 @@ import qualified Parser as P
 import qualified Runtime as R
 import qualified Compile as C
 
-data BfcOptions = BfcOptions 
+newtype BfcOptions = BfcOptions 
                 { bfcCommand :: BfcCommand
                 } deriving Show
 
@@ -74,7 +74,7 @@ parseBrainfuck :: String -> Either [P.SyntaxError] [P.Command]
 parseBrainfuck = P.parse . L.tokenize
 
 -- REPL
-data ReplState = ReplState
+newtype ReplState = ReplState
                { programData :: R.ProgramData 
                } deriving Show
 
@@ -92,7 +92,7 @@ parseReplCommand (':':_) = Help
 parseReplCommand x = Interpret x
 
 
-repl :: ReplState -> ReplCommand -> IO (ReplState)
+repl :: ReplState -> ReplCommand -> IO ReplState
 repl s Help = putStrLn "Help" >>= \() -> return s
 repl s Clean = return $ s { programData = R.initData 0 }
 repl s (Load file) = 
@@ -105,13 +105,13 @@ repl s@(ReplState d) (Interpret bf) =
        Left e -> mapM_ (putStrLn . describeError) e >>= \() -> return s
        Right p -> R.runProgram d p >>= \ns -> return s { programData = ns }
 
-runRepl :: ReplState -> IO(ReplState)
+runRepl :: ReplState -> IO ReplState
 runRepl s = 
   putStr "bfi| " >> hFlush stdout >> fmap parseReplCommand getLine 
     >>= repl s 
     >>= (\newState -> showProgramData newState >> runRepl newState)
   where
-    showProgramData = putStrLn . show . programData
+    showProgramData = print . programData
   
 run :: RunOptions -> IO()
 run (RunOptions fs rMode)  = do
@@ -123,8 +123,8 @@ run (RunOptions fs rMode)  = do
 
 -- compilation
 compile :: C.Compilator -> [String] -> Either [String] [String]
-compile c sources = 
-  bimap (fmap describeError) (c . P.optimize) . combineSources $ sources
+compile c = 
+  bimap (fmap describeError) (c . P.optimize) . combineSources 
   where
     combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
@@ -141,8 +141,8 @@ cCompilator = C.transpileToC $ C.C "p" "d"
 describeError :: P.SyntaxError -> String
 describeError = show
 
-readFiles :: [String] -> IO([String])
-readFiles = sequence . fmap readFile
+readFiles :: [String] -> IO [String]
+readFiles = traverse readFile
 
 main :: IO()
 main = execParser opts >>= dispatch

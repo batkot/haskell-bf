@@ -42,11 +42,11 @@ parseToken (L.Token (L.Comment _) _) cs = (Right NoOp, cs)
 parseToken startToken@(L.Token L.StartLoop _) cs = parseLoop cs []
   where
     parseLoop :: [L.Token] -> [Command] -> (Either [SyntaxError] Command, [L.Token])
-    parseLoop ((L.Token L.EndLoop _):ts) done = (Right (Loop (reverse done)), ts)
+    parseLoop (L.Token L.EndLoop _:ts) done = (Right (Loop (reverse done)), ts)
     parseLoop [] _ = (Left [SyntaxError startToken MissingLoopClose], [])
     parseLoop (t:ts) acc = 
       case res of
-           Left x -> (Left ((SyntaxError startToken MissingLoopClose):x), remaining)
+           Left x -> (Left (SyntaxError startToken MissingLoopClose : x), remaining)
            Right cmd -> step cmd
       where
         (res, remaining) = parseToken t ts
@@ -64,12 +64,12 @@ parse = first concat . flattenEither . parse' []
 
 optimizeStep :: [Command] -> [Command] -> [Command]
 optimizeStep done [] = reverse done
-optimizeStep acc ((Move x):(Move y):cs) = optimizeStep acc $ (Move (x + y)):cs
-optimizeStep acc ((Add x):(Add y):cs) = optimizeStep acc $ (Add (x + y)):cs
-optimizeStep acc ((Move 0):cs) = optimizeStep acc cs
-optimizeStep acc ((Add 0):cs) = optimizeStep acc cs
+optimizeStep acc (Move x:(Move y : cs)) = optimizeStep acc $ Move (x + y) : cs
+optimizeStep acc (Add x:(Add y : cs)) = optimizeStep acc $ Add (x + y) : cs
+optimizeStep acc (Move 0 : cs) = optimizeStep acc cs
+optimizeStep acc (Add 0 : cs) = optimizeStep acc cs
 optimizeStep acc (NoOp:cs) = optimizeStep acc cs
-optimizeStep acc ((Loop cmds):cs) = 
+optimizeStep acc (Loop cmds : cs) = 
   optimizeStep (optimizedLoop:acc) cs
   where
     optimizedLoop = Loop $ optimizeStep [] cmds
