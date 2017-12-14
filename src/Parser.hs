@@ -69,6 +69,7 @@ optimizeStep acc (Add x:(Add y : cs)) = optimizeStep acc $ Add (x + y) : cs
 optimizeStep acc (Move 0 : cs) = optimizeStep acc cs
 optimizeStep acc (Add 0 : cs) = optimizeStep acc cs
 optimizeStep acc (NoOp:cs) = optimizeStep acc cs
+optimizeStep acc (Loop x : Loop _ : cs) = optimizeStep acc $ Loop x : cs
 optimizeStep acc (Loop cmds : cs) = 
   optimizeStep (optimizedLoop:acc) cs
   where
