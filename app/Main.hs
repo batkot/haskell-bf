@@ -138,6 +138,9 @@ compile' c (CompileOptions sourceFiles o) =
 cCompilator :: C.Compilator
 cCompilator = C.transpileToC $ C.C "p" "d"
 
+hCompilator :: C.Compilator
+hCompilator = C.transpileToHaskell
+
 describeError :: P.SyntaxError -> String
 describeError = show
 
@@ -152,4 +155,4 @@ main = execParser opts >>= dispatch
       <> progDesc "Simple Brainfuck interpreter, compiler and REPL"
       <> header "The Meretricious Brainfuck Compilation System")
     dispatch (BfcOptions (Run r)) = run r
-    dispatch (BfcOptions (Compile c)) = compile' cCompilator c
+    dispatch (BfcOptions (Compile c)) = compile' hCompilator c
