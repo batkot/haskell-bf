@@ -21,7 +21,10 @@ data BfcCommand = Compile CompileOptions
 
 data CompileOptions = CompileOptions
                     { filesToCompile :: [String]
+                    , target :: TargetPlatform
                     , outputFile :: String } deriving Show
+
+data TargetPlatform = C | Haskell deriving Show
 
 data RunOptions = RunOptions
                 { files :: [String]
@@ -38,6 +41,10 @@ bfcOptionsParser = BfcOptions
                    <> command "run" (info (runCmdParser <**> helper) ( progDesc "Runs Brainfuck sources" ))
                     )
 
+cLangParser :: Parser TargetPlatform
+cLangParser = flag' C (long "clang" <> short 'c' <> help "compiles brainfuck to C")
+              <|> flag' Haskell ( long "haskell" <> short 'h' <> help "compiles brainfuck to Haskell")
+
 compileParser :: Parser BfcCommand
 compileParser = Compile <$> compileOptionsParser
 
@@ -47,6 +54,7 @@ compileOptionsParser = CompileOptions
                                (metavar "INPUT_SOURCES"
                                <> help "Brainfuck sources to compile. Files are parsed and compiled in given order to single BF program")
                              )
+                    <*> cLangParser
                     <*> strOption
                         ( long "output"
                         <> short 'o'
@@ -129,7 +137,7 @@ compile c =
     combineSources = bimap concat concat . P.flattenEither . fmap parseBrainfuck
 
 compile' :: C.Compilator -> CompileOptions -> IO()
-compile' c (CompileOptions sourceFiles o) = 
+compile' c (CompileOptions sourceFiles _ o) = 
   readFiles sourceFiles >>= either printErrors writeSource . compile c 
     where
       printErrors = putStrLn . unlines
@@ -155,4 +163,8 @@ main = execParser opts >>= dispatch
       <> progDesc "Simple Brainfuck interpreter, compiler and REPL"
       <> header "The Meretricious Brainfuck Compilation System")
     dispatch (BfcOptions (Run r)) = run r
-    dispatch (BfcOptions (Compile c)) = compile' hCompilator c
+    dispatch (BfcOptions (Compile c)) = compile' compilator c
+        where 
+            compilator = case target c of
+                C -> cCompilator
+                Haskell -> hCompilator
