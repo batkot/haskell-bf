@@ -6,7 +6,7 @@ homepage:            https://github.com/batkot/haskell-bf#readme
 license:             BSD3
 license-file:        LICENSE
 author:              Tomasz Batko
-maintainer:          dekster.z@gmail.com
+maintainer:          batkot@protonmail.com
 copyright:           2017 Tomasz Batko
 category:            Fun
 build-type:          Simple

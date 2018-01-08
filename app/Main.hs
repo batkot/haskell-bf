@@ -111,7 +111,10 @@ repl s (Load file) =
 repl s@(ReplState d) (Interpret bf) = 
   case parseBrainfuck bf of
        Left e -> mapM_ (putStrLn . describeError) e >>= \() -> return s
-       Right p -> R.runProgram d p >>= \ns -> return s { programData = ns }
+       Right p -> runBf d p >>= \ns -> return s { programData = ns }
+    where 
+        runBf = R.runProgram R.bfRuntime
+
 
 runRepl :: ReplState -> IO ReplState
 runRepl s = 

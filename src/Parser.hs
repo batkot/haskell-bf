@@ -8,7 +8,8 @@ module Parser
   ) where
 
 import qualified Lexer as L
-import Data.Bifunctor 
+
+import Data.Bifunctor (first)
 import Data.Either (lefts, rights)
 
 data Command = Move Int
